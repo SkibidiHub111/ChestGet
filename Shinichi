@@ -1,0 +1,143 @@
+-- Shinichi Hub | Auto Chest Farm (Sea 1, 2, 3) with Server Hop, ESP & UI Effects + Anti-Kick
+local ShinichiHub = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ChestCounter = Instance.new("TextLabel")
+local MoneyEarned = Instance.new("TextLabel")
+local ServerStatus = Instance.new("TextLabel")
+local ToggleButton = Instance.new("TextButton")
+
+-- UI Settings
+ShinichiHub.Name = "ShinichiHub"
+ShinichiHub.Parent = game.CoreGui
+
+MainFrame.Size = UDim2.new(0, 300, 0, 200)
+MainFrame.Position = UDim2.new(0.7, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 102, 204)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ShinichiHub
+
+Title.Text = "Shinichi - Chest Hunter"
+Title.Size = UDim2.new(1, 0, 0.15, 0)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.Parent = MainFrame
+
+ChestCounter.Text = "Chests Collected: 0"
+ChestCounter.Position = UDim2.new(0, 10, 0.2, 0)
+ChestCounter.Size = UDim2.new(0.9, 0, 0.15, 0)
+ChestCounter.BackgroundTransparency = 1
+ChestCounter.TextColor3 = Color3.fromRGB(0, 255, 127)
+ChestCounter.Font = Enum.Font.Gotham
+ChestCounter.TextScaled = true
+ChestCounter.Parent = MainFrame
+
+MoneyEarned.Text = "Money Earned: 0"
+MoneyEarned.Position = UDim2.new(0, 10, 0.4, 0)
+MoneyEarned.Size = UDim2.new(0.9, 0, 0.15, 0)
+MoneyEarned.BackgroundTransparency = 1
+MoneyEarned.TextColor3 = Color3.fromRGB(255, 215, 0)
+MoneyEarned.Font = Enum.Font.Gotham
+MoneyEarned.TextScaled = true
+MoneyEarned.Parent = MainFrame
+
+ServerStatus.Text = "Server Status: Active"
+ServerStatus.Position = UDim2.new(0, 10, 0.6, 0)
+ServerStatus.Size = UDim2.new(0.9, 0, 0.15, 0)
+ServerStatus.BackgroundTransparency = 1
+ServerStatus.TextColor3 = Color3.fromRGB(135, 206, 250)
+ServerStatus.Font = Enum.Font.Gotham
+ServerStatus.TextScaled = true
+ServerStatus.Parent = MainFrame
+
+ToggleButton.Text = "Toggle On/Off"
+ToggleButton.Size = UDim2.new(0.9, 0, 0.15, 0)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.8, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextScaled = true
+ToggleButton.Parent = MainFrame
+
+-- Auto Chest Farm Logic
+local ChestCollected = 0
+local MoneyGained = 0
+local AutoFarm = true
+
+ToggleButton.MouseButton1Click:Connect(function()
+    AutoFarm = not AutoFarm
+    ToggleButton.Text = AutoFarm and "Running" or "Paused"
+    ServerStatus.Text = AutoFarm and "Server Status: Active" or "Server Status: Paused"
+end)
+
+-- ✅ Anti-Kick System
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+pcall(function()
+    local vu = game:GetService("VirtualUser")
+    Players.LocalPlayer.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        wait(1)
+        vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    end)
+end)
+
+-- **Hàm reset nhân vật**
+function ResetCharacter()
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.Health = 0  -- Reset bằng cách hạ máu về 0
+        ServerStatus.Text = "Resetting Character..."
+        wait(2)  -- Đợi nhân vật respawn
+        ServerStatus.Text = "Resumed Farming"
+    end
+end
+
+-- Chức năng nhặt rương
+function CollectChest(Chest)
+    local startMoney = LocalPlayer.Data.Beli.Value
+    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Chest.CFrame
+    wait(0.5)
+
+    local collected = false
+    for i = 1, 3 do
+        if LocalPlayer.Data.Beli.Value > startMoney then
+            collected = true
+            break
+        end
+        wait(0.2)
+    end
+
+    if collected then
+        ChestCollected = ChestCollected + 1
+        local gainedMoney = LocalPlayer.Data.Beli.Value - startMoney
+        MoneyGained = MoneyGained + gainedMoney
+        ChestCounter.Text = "Chests Collected: " .. ChestCollected
+        MoneyEarned.Text = "Money Earned: " .. MoneyGained
+
+        -- **Reset sau khi nhặt 2 rương**
+        if ChestCollected % 2 == 0 then
+            ResetCharacter()
+        end
+    end
+end
+
+function FindChests()
+    for _, Chest in ipairs(workspace:GetDescendants()) do
+        if Chest:IsA("Part") and Chest.Name:lower():find("chest") then
+            CollectChest(Chest)
+        end
+    end
+end
+
+while wait(5) do
+    if AutoFarm then
+        FindChests()
+    end
+end
